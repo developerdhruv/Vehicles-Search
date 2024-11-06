@@ -20,6 +20,7 @@ function SearchPage() {
     const [showModelSuggestions, setShowModelSuggestions] = useState(false);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [isCardVisible, setIsCardVisible] = useState(false);
+    const [filteredCategories, setFilteredCategories] = useState(categories);
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -77,7 +78,7 @@ function SearchPage() {
             if (model.length > 1) {
                 try {
                     const response = await axios.get('https://sql-node-api-1.onrender.com/api/models', {
-                        params: { term: model }
+                        params: { make: make }
                     });
                     setModelSuggestions(response.data);
                     setShowModelSuggestions(true);
@@ -129,6 +130,21 @@ function SearchPage() {
         setSelectedProduct(product);
         setIsCardVisible(true);
     };
+    const handleSearchChange = (e) => {
+      const searchValue = e.target.value;
+      setCategory(searchValue);
+  
+      // Filter categories based on search input
+      const updatedCategories = categories.filter((cat) =>
+        cat.toLowerCase().includes(searchValue.toLowerCase())
+      );
+      setFilteredCategories(updatedCategories);
+    };
+  
+    const handleOptionClick = (selectedCategory) => {
+      setCategory(selectedCategory);
+      setFilteredCategories(categories); // Reset list when a category is selected
+    };
 
     const yearOptions = Array.from({ length: 65 }, (_, i) => 1960 + i); // Generate years from 1960 to 2024
 
@@ -138,17 +154,31 @@ function SearchPage() {
           Product Search
         </h1>
         <div className="flex flex-col md:flex-row gap-4 mb-10">
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="border border-purple-400 rounded-lg p-3 w-full focus:outline-none"
-          >
-            {categories.map((category, index) => (
-              <option key={index} value={category}>
-                {category}
-              </option>
-            ))}
-          </select>
+        <div className="relative w-full">
+      <input
+        type="text"
+        value={category}
+        onChange={handleSearchChange}
+        placeholder="Search category..."
+        className="border border-purple-400 rounded-lg p-3 w-full focus:outline-none"
+      />
+      {category && (
+        <ul className="absolute mt-1 w-full bg-white border border-purple-400 rounded-lg max-h-48 overflow-y-auto z-10">
+          {filteredCategories.map((cat, index) => (
+            <li
+              key={index}
+              onClick={() => handleOptionClick(cat)}
+              className="p-2 hover:bg-purple-100 cursor-pointer"
+            >
+              {cat}
+            </li>
+          ))}
+          {filteredCategories.length === 0 && (
+            <li className="p-2 text-gray-500">No results found</li>
+          )}
+        </ul>
+      )}
+    </div>
           <div className="relative w-full">
             <input
               type="text"
