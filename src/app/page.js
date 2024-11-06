@@ -24,7 +24,7 @@ function SearchPage() {
     useEffect(() => {
         const fetchCategories = async () => {
             try {
-                const response = await axios.get('http://localhost:3042/api/categories');
+                const response = await axios.get('https://sql-node-api-1.onrender.com/api/categories');
                 setCategories(response.data);
             } catch (error) {
                 console.error("Error fetching categories:", error);
@@ -37,7 +37,7 @@ function SearchPage() {
         const fetchSuggestions = async () => {
             if (keyword.length > 1) {
                 try {
-                    const response = await axios.get('http://localhost:3042/api/suggestions', {
+                    const response = await axios.get('https://sql-node-api-1.onrender.com/api/suggestions', {
                         params: { term: keyword }
                     });
                     setSuggestions(response.data);
@@ -56,7 +56,7 @@ function SearchPage() {
         const fetchMakeSuggestions = async () => {
             if (make.length > 1) {
                 try {
-                    const response = await axios.get('http://localhost:3042/api/makes', {
+                    const response = await axios.get('https://sql-node-api-1.onrender.com/api/makes', {
                         params: { term: make }
                     });
                     setMakeSuggestions(response.data);
@@ -76,7 +76,7 @@ function SearchPage() {
         const fetchModelSuggestions = async () => {
             if (model.length > 1) {
                 try {
-                    const response = await axios.get('http://localhost:3042/api/models', {
+                    const response = await axios.get('https://sql-node-api-1.onrender.com/api/models', {
                         params: { term: model }
                     });
                     setModelSuggestions(response.data);
@@ -96,7 +96,7 @@ function SearchPage() {
         setLoading(true);
         setError('');
         try {
-            const response = await axios.get('http://localhost:3042/api/products', {
+            const response = await axios.get('https://sql-node-api-1.onrender.com/api/products', {
                 params: { make, model, year, keyword, category }
             });
             setSearchResults(response.data);
