@@ -9,6 +9,7 @@ function SearchPage() {
     const [year, setYear] = useState('');
     const [keyword, setKeyword] = useState('');
     const [category, setCategory] = useState('');
+    const [sku, setSku] = useState(''); // New state for SKU
     const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -16,28 +17,31 @@ function SearchPage() {
     const [models, setModels] = useState([]);
     const [selectedProduct, setSelectedProduct] = useState(null);
     const [isCardVisible, setIsCardVisible] = useState(false);
+    const [yearRange, setYearRange] = useState({ min: 1922, max: 2024 });
 
+    // Existing useEffect hooks remain the same
     useEffect(() => {
-      const fetchCategories = async () => {
-        try {
-          const response = await axios.get('https://sql-node-api-1.onrender.com/api/categories');
-          const rawCategories = response.data;
-  
-          // Split categories while respecting `\,` as a single entity
-          const formattedCategories = rawCategories.reduce((acc, cat) => {
-            const subCategories = cat.split(/(?:^|[^\\]),/).map(subCat => subCat.replace(/\\,/g, ',').trim());
-            return acc.concat(subCategories);
-          }, []);
-  
-          // Remove duplicates
-          const uniqueCategories = Array.from(new Set(formattedCategories));
-          setCategories(uniqueCategories);
-        } catch (error) {
-          console.error('Error fetching categories:', error);
-        }
-      };
-      fetchCategories();
+        const fetchCategories = async () => {
+            try {
+                const response = await axios.get('https://sql-node-api-1.onrender.com/api/categories');
+                const rawCategories = response.data;
+
+                const formattedCategories = rawCategories.reduce((acc, cat) => {
+                    const subCategories = cat.split(/(?:^|[^\\]),/).map(subCat => 
+                        subCat.replace(/\\,/g, ',').trim()
+                    );
+                    return acc.concat(subCategories);
+                }, []);
+
+                const uniqueCategories = Array.from(new Set(formattedCategories));
+                setCategories(uniqueCategories);
+            } catch (error) {
+                console.error('Error fetching categories:', error);
+            }
+        };
+        fetchCategories();
     }, []);
+
     useEffect(() => {
         const fetchMakes = async () => {
             try {
@@ -45,13 +49,10 @@ function SearchPage() {
                     params: { term: make }
                 });
                 const rawMakes = response.data;
-
-                // Split makes into individual makes
                 const formattedMakes = rawMakes
-                    .map(make => make.split(',').map(item => item.trim())) // Split grouped makes
-                    .flat(); // Flatten the array to remove nested arrays
-
-                const uniqueMakes = Array.from(new Set(formattedMakes)); // Remove duplicates
+                    .map(make => make.split(',').map(item => item.trim()))
+                    .flat();
+                const uniqueMakes = Array.from(new Set(formattedMakes));
                 setMakes(uniqueMakes);
             } catch (error) {
                 console.error("Error fetching makes:", error);
@@ -78,12 +79,42 @@ function SearchPage() {
         }
     }, [make]);
 
+    useEffect(() => {
+        const fetchYearRange = async () => {
+            if (!make) {
+                setYearRange({ min: 1922, max: 2024 });
+                return;
+            }
+
+            try {
+                const response = await axios.get('https://sql-node-api-1.onrender.com/api/years-range', {
+                    params: { make }
+                });
+                const { minYear, maxYear } = response.data;
+                if (minYear && maxYear) {
+                    setYearRange({
+                        min: parseInt(minYear),
+                        max: parseInt(maxYear)
+                    });
+                    
+                    if (year && (parseInt(year) < minYear || parseInt(year) > maxYear)) {
+                        setYear('');
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching year range:', error);
+            }
+        };
+
+        fetchYearRange();
+    }, [make]);
+
     const handleSearch = async () => {
         setLoading(true);
         setError('');
         try {
             const response = await axios.get('https://sql-node-api-1.onrender.com/api/products', {
-                params: { make, year, model, category, keyword }
+                params: { make, year, model, category, keyword, sku }
             });
             setSearchResults(response.data);
         } catch (error) {
@@ -94,8 +125,11 @@ function SearchPage() {
         }
     };
 
+    // Existing handler functions remain the same
     const handleMakeClick = (selectedMake) => {
         setMake(selectedMake);
+        setModel('');
+        setYear('');
     };
 
     const handleModelClick = (selectedModel) => {
@@ -107,13 +141,27 @@ function SearchPage() {
         setIsCardVisible(true);
     };
 
-    const yearOptions = Array.from({ length: 103 }, (_, i) => 1922 + i);  // Generate years from 1960 to 2024
+    const yearOptions = Array.from(
+        { length: yearRange.max - yearRange.min + 1 },
+        (_, i) => yearRange.max - i
+    );
 
     return (
         <div className="p-6 bg-gradient-to-br from-blue-200 via-purple-200 to-pink-200 min-h-screen">
             <h1 className="text-5xl font-extrabold text-center text-transparent bg-clip-text bg-gradient-to-r from-purple-700 to-pink-700 mb-10">
                 Product Search
             </h1>
+            <div className="flex flex-col md:flex-row gap-4 mb-4">
+                <div className="relative w-full">
+                    <input
+                        type="text"
+                        placeholder="Part Number / SKU"
+                        value={sku}
+                        onChange={(e) => setSku(e.target.value)}
+                        className="border border-purple-400 rounded-lg p-3 w-full focus:outline-none focus:ring-4 focus:ring-purple-500 shadow-md transition-all"
+                    />
+                </div>
+            </div>
             <div className="flex flex-col md:flex-row gap-4 mb-10">
                 <div className="relative w-full">
                     <select
@@ -136,9 +184,9 @@ function SearchPage() {
                         className="border border-purple-400 rounded-lg p-3 w-full focus:outline-none"
                     >
                         <option value="">Select Year</option>
-                        {yearOptions.map((year) => (
-                            <option key={year} value={year}>
-                                {year}
+                        {yearOptions.map((yearOption) => (
+                            <option key={yearOption} value={yearOption}>
+                                {yearOption}
                             </option>
                         ))}
                     </select>
@@ -206,6 +254,7 @@ function SearchPage() {
                         <h3 className="text-xl font-bold mb-2">{product.Name}</h3>
                         <p className="text-gray-600 mb-2">{product.Description}</p>
                         <p className="text-lg font-semibold">{product.Price}</p>
+                        <p className="text-sm text-gray-500 mb-2">SKU: {product.SKU}</p>
                         <button
                             onClick={() => handleMoreClick(product)}
                             className="bg-gradient-to-r from-purple-500 to-pink-500 text-white font-bold rounded-lg p-2 mt-4 w-full"
@@ -225,9 +274,7 @@ function SearchPage() {
                             &times;
                         </button>
                         <img
-                            src={
-                                selectedProduct.Images || "https://via.placeholder.com/150"
-                            }
+                            src={selectedProduct.Images || "https://via.placeholder.com/150"}
                             alt={selectedProduct.Name}
                             className="w-full h-64 object-cover rounded mb-6"
                         />
